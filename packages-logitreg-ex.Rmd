@@ -1,0 +1,118 @@
+We are going to develop a simple package for logistic regression together. 
+For a logistic model with a binary dependent variable $y \in \{0, 1\}^n$ and design matrix $X$ with $n$ rows and $q$ columns, the log-likelihood of the $q$-dimensional 
+regression parameter vector $\beta$ is
+$$
+\ell(\beta; y, X) = \sum_i y_i\log(p_i) + (1-y_i)\log(1-p_i) 
+$$
+with $p = g(X \beta)$ and $g(x) = \tfrac{1}{1+\exp(-x)}$.
+The first derivative or gradient of the log-likelihood is 
+$$
+\frac{\partial \ell(\beta; y, X)}{\partial \beta} = (y - p)^T X.
+$$
+
+The negative log-likelihood and negative gradient are implemented in the 
+`logitreg_starter_kit.R` file for your convenience. 
+
+Use the `devtools` workflow to solve the tasks listed below:
+
+1. make changes, save source files
+1. reload with `load_all()`
+1. run tests (preferrably with `test()`, see task 3)
+1. if successful, update documentation with `document()` (& increment version number in `DESCRIPTION`, maybe...)
+1. run `check()` (or `test()` or `check_doc()` etc) 
+  after major changes to see if you still pass
+
+*Note: RStudio provides a special kind of project for R package development -- that might be handy as well.*
+
+## Task 1
+
+* Create package structure directory with `devtools::create()`.
+* Add the functions for the likelihood and the gradient from 
+`logitreg_starter_kit.R` to the `/R` directory. 
+* Use `roxygen2` to document the functions and check your work. 
+`devtools`'s `document()` and `dev_help()` will be useful here.
+* Run `check()` to check whether your package is ready for CRAN. Try to understand and get rid of all `WARNINGS` and `NOTES`.
+
+_Extra credit:_ The functions for the likelihood and the gradient have the same
+arguments. Read up on `@rdname` (e.g., 
+[here](http://cran.r-project.org/web/packages/roxygen2/vignettes/rd.html)) and 
+use it to create a single help file for both of those functions.
+
+## Task 2  
+
+Write and document a function `fit_logitreg` that uses 
+`R`'s built-in numerical optimization routine `optim()` to find the maximum likelihood estimator for the regression coefficients, where the minimal inputs are  
+
+* `design`: design matrix $X$,
+* `response`: vector $y$.
+
+Your function should also allow the user to control the settings of `optim()`.
+
+Your function should return a list with entries
+
+* `coefficients`: the regression coefficients,
+* `fitted`: the estimated probabilities 
+           $P(y_i=1) = \tfrac{1}{1+\exp(-x_i^T\beta)}$,
+* `data`: the original data (`design` & `response`) used for the fit.
+
+Use 
+```r
+data <- sim_data(seed=123, q_numeric=1)
+str(data)
+```
+to generate a simple synthetic data set for testing and look at its structure. 
+`sim_data` is in `logitreg_starter_kit.R`.
+
+## Task 3  
+
+Set up the `tests` directory so that `test()` (and `check()`) can do its thing
+The simplest way to do so is `usethis::use_testthat()`^[check out the other `use_XXX` functions as well!]. 
+
+Write a `testthat` test that checks that our `logitreg` estimates are the
+same (up to the second significant digit, see `?signif`) as the result we get 
+from `glm()` on the synthetic data from the previous exercise.
+
+## Task 4
+
+Adapt the test defined in the previous exercise to check the results that  
+`fit_logitreg()` returns for the datasets `trouble1` and `trouble2` saved in
+`data-trouble.Rdata`. Try to fix the bugs or at least improve the behavior
+of the routine if/when it fails. 
+
+_Hint:_ `optim()` _uses an iterative algorithm that is not guaranteed to
+converge to the maximum of the likelihood._
+
+Once `fit_logitreg()` behaves as desired, add the modified tests to the `tests` directory. Datasets needed for tests should go into the `inst/testdata/` 
+sub-directory of your package. Use `system.file` and `load` to load these 
+datasets in the tests. Use `package_coverage()` from the [`covr`](https://cran.r-project.org/web/packages/covr/index.html) package to
+check the coverage of your tests.
+
+## Task 5
+
+All the cool kids have a formula-based interface for their regression functions.
+That's what we want as well. 
+
+Define an S3 generic `logitreg`, make the previous `fit_logitreg()` the default
+method for that generic, and write a `formula` method `logitreg.formula(design, data, ...)` for `logitreg()` that takes a model formula and a `data.frame` as arguments instead. The return values for all these methods should be objects
+of a new class `logitreg` (i.e., a `list` with cofficients, fitted values, and 
+the data). Don't forget to update the documentation as well.
+
+_Hint: You'll need_ at least `model.matrix()` _for the formula method. If you can, also read up on_ `model.frame()`.
+
+## Task 6
+
+Speaking of cool kids: You cannot join the club if your regression function
+doesn't return objects for which at least `summary`, `predict`, `coef`, `plot`
+and `fitted` methods are defined.
+
+Write at least `predict` and `fitted` methods for the objects returned by `logitreg`. 
+Write a `plot` method (or implement any other interesting feature you can think of) that needs a function from a different package to work. 
+For example, you could use  the `ROCR` package to plot the [ROC curve](en.wikipedia.org/wiki/Receiver_operating_characteristic) for the fitted model. 
+Don't forget to update the documentation as well.
+`devtools::check` that your package is compliant with CRAN policies.
+
+_Hint: When adding new methods to a generic defined in somebody else's package 
+(in this case, the_ `stats` _and_ `graphics` _packages), you first need to check
+the definition of the generic as that defines the minimal set of arguments your
+method needs to accept. It's also a good idea to look at other methods defined for
+that generic to make sure your new method's behavior and interface are as similar to them as possible._
